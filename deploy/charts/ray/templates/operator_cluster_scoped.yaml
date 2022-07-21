@@ -63,4 +63,73 @@ spec:
           limits:
             memory: 2Gi
             cpu: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring
+  namespace: {{ .Values.operatorNamespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: mlflow
+      operation: monitoring
+  template:
+    metadata:
+      labels:
+        component: mlflow
+        operation: monitoring
+    spec:
+      serviceAccountName: ray-operator-serviceaccount
+      containers:
+      - name: mlflow-server
+        imagePullPolicy: IfNotPresent
+        image: guidebooks/mlflow
+        env:
+        - name: MLFLOW_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 1
+            memory: 2Gi
+            #ephemeral-storage: 1Gi
+          limits:
+            memory: 4Gi
+            cpu: 2
+        ports:
+          - name: http
+            containerPort: 9080
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+        volumeMounts:
+        - mountPath: /mnt/mlflow-disk
+          name: mlflow-disk
+      volumes:
+      - name: mlflow-disk
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitoring-service
+  namespace: {{ .Values.operatorNamespace }}
+spec:
+  selector:
+    component: mlflow
+    operation: monitoring
+  ports:
+  - name: mlflow
+    protocol: TCP
+    port: 9080
+    targetPort: http
 {{- end }}
