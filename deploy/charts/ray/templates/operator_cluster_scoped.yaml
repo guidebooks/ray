@@ -83,6 +83,53 @@ spec:
     spec:
       serviceAccountName: ray-operator-serviceaccount
       containers:
+      {{- if (.Values.tensorboard.enable) }}
+      - name: tensorboard
+        command: ["/bin/sh", "-c"]
+        args: ["tensorboard --logdir", {{ .Values.tensorboard.path }}]
+        imagePullPolicy: IfNotPresent
+        image: guidebooks/tensorboard
+        env:
+        - name: TBOARD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.tensorboard.secret }}
+              key: S3_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.tensorboard.secret }}
+              key: S3_SECRET_ACCESS_KEY
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.tensorboard.secret }}
+              key: S3_REGION
+        resources:
+          requests:
+            cpu: 1
+            memory: 2Gi
+            #ephemeral-storage: 1Gi
+          limits:
+            memory: 4Gi
+            cpu: 2
+        ports:
+          - name: tboard
+            containerPort: 6006
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /
+            port: tboard
+        readinessProbe:
+          httpGet:
+            path: /
+            port: tboard
+      {{- end }}
       - name: mlflow-server
         imagePullPolicy: IfNotPresent
         image: guidebooks/mlflow
@@ -132,4 +179,10 @@ spec:
     protocol: TCP
     port: 9080
     targetPort: http
+  {{- if (.Values.tensorboard.enable) }}
+  - name: tboard
+    protocol: TCP
+    port: 6066
+    targetPort: tboard
+  {{- end }}
 {{- end }}

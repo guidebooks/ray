@@ -109,3 +109,6 @@ operatorNamespace: default
 # by the operator. In other words, the images specified under the fields `operatorImage` and `image`
 # should carry matching Ray versions.
 operatorImage: rayproject/ray:latest
+
+# non ray related values, specific to monitoring
+tensorboard.enable: false
